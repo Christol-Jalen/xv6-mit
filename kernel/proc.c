@@ -22,6 +22,7 @@ static void freeproc(struct proc *p);
 extern char trampoline[]; // trampoline.S
 
 // initialize the proc table at boot time.
+// 进程表初始化
 void
 procinit(void)
 {
@@ -291,6 +292,9 @@ fork(void)
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
+  //将trace_mask拷贝到子进程
+  np->trace_mask = p->trace_mask;
+
   pid = np->pid;
 
   np->state = RUNNABLE;
@@ -460,28 +464,29 @@ scheduler(void)
   struct cpu *c = mycpu();
   
   c->proc = 0;
-  for(;;){
+  for(;;){ //无限循环
     // Avoid deadlock by ensuring that devices can interrupt.
-    intr_on();
+    intr_on(); // 打开中断，避免死锁
     
     int found = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
+    for(p = proc; p < &proc[NPROC]; p++) { // 遍历进程表，查找状态为 RUNNABLE 的进程
+      acquire(&p->lock); // 获取当前进程的锁
+      if(p->state == RUNNABLE) { // 如果找到可运行的进程：
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
-
+        p->state = RUNNING; // 将进程状态设为 RUNNING
+        c->proc = p; // 将当前调度器的 CPU 结构体的 proc 指针指向当前被选中的进程。这表明该 CPU 正在运行这个进程。
+        swtch(&c->context, &p->context); // 上下文切换的结果：
+	                                       // •	当 swtch 被调用时，调度器将暂停执行，进程 p 开始执行。
+	                                       // •	当进程 p 让出 CPU（例如通过 yield()、等待 I/O、被中断等），控制权将返回到调度器，继续执行后续代码。
         // Process is done running for now.
         // It should have changed its p->state before coming back.
-        c->proc = 0;
+        c->proc = 0; // 清除 CPU 的进程指针
 
         found = 1;
       }
-      release(&p->lock);
+      release(&p->lock); // 释放进程锁
     }
     if(found == 0) {
       intr_on();
@@ -489,6 +494,19 @@ scheduler(void)
     }
   }
 }
+
+//------------------------LAB 2---------------------------
+void
+procnum(uint64 *dst) // 获取进程数
+{
+  *dst = 0;
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++) {
+    if (p->state != UNUSED)
+      (*dst)++;
+  }
+}
+//--------------------------------------------------------
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores

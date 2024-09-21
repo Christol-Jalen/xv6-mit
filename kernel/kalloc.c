@@ -14,14 +14,14 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
-struct run {
+struct run { // 内存块
   struct run *next;
 };
 
-struct {
+struct { // 无名结构体（一次性使用， 全局变量）
   struct spinlock lock;
   struct run *freelist;
-} kmem;
+} kmem; // 实例化
 
 void
 kinit()
@@ -29,6 +29,22 @@ kinit()
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*)PHYSTOP);
 }
+
+// --------------------LAB 2------------------
+void
+freebytes(uint64 *dst)
+{
+  *dst = 0;
+  struct run *p = kmem.freelist; // 用于遍历
+
+  acquire(&kmem.lock);
+  while (p) { 
+    *dst += PGSIZE;
+    p = p->next;
+  }
+  release(&kmem.lock);
+}
+// -------------------------------------------
 
 void
 freerange(void *pa_start, void *pa_end)
@@ -80,3 +96,4 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
