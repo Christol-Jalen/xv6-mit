@@ -105,6 +105,7 @@ extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_trace(void); // LAB 2
+extern uint64 sys_sysinfo(void); // LAB 2
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
