@@ -14,7 +14,7 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
-struct run {
+struct run { // 一个链表节点，用于表示一个内存页
   struct run *next;
 };
 
@@ -27,7 +27,7 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  freerange(end, (void*)PHYSTOP);
+  freerange(end, (void*)PHYSTOP); // 调用freerange将内存添加到空闲列表中
 }
 
 void
@@ -65,18 +65,21 @@ kfree(void *pa)
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
+// 目的：kalloc 函数从内核的空闲内存页链表中分配一个内存页，并返回其地址
 void *
 kalloc(void)
 {
-  struct run *r;
+  struct run *r; // 声明一个指向 struct run 的指针 r，用于临时存储从 freelist 中获取的空闲内存页。
 
-  acquire(&kmem.lock);
-  r = kmem.freelist;
-  if(r)
-    kmem.freelist = r->next;
-  release(&kmem.lock);
-
+  acquire(&kmem.lock); // 调用 acquire 函数获取 kmem.lock 自旋锁
+  r = kmem.freelist;  // r 将指向一个空闲内存页
+  if(r) // 检查 r 是否为非空指针（即 freelist 是否有可用内存页）
+    kmem.freelist = r->next; // 如果 r 非空，将 freelist 更新为下一个空闲页节点
+  release(&kmem.lock); // 调用 release 函数释放 kmem.lock 自旋锁。 目的：允许其他线程访问和修改 freelist
+	                      
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
-  return (void*)r;
+                                 // memset() 的主要作用是将指定内存区域的每个字节设置为相同的值
+                                 // 在这里，将指针 r 指向的内存区域的前 PGSIZE（4096） 个字节，每个字节都设置为 0x05（即十进制的 5）
+  return (void*)r; // 返回一个指向分配的内存页的指针，供调用者使用
 }
