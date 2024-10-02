@@ -311,6 +311,17 @@ r_ra()
   return x;
 }
 
+// -----------------------------LAB 4-------------------------------
+// 读s0(frame pointer)的值
+static inline uint64
+r_fp()
+{
+  uint64 x;
+  asm volatile("mv %0, s0" : "=r" (x));
+  return x;
+}
+// -----------------------------------------------------------------
+
 // flush the TLB.
 static inline void
 sfence_vma()

@@ -108,7 +108,7 @@ found:
   p->pid = allocpid();
 
   // Allocate a trapframe page.
-  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){ // 使用kalloc函数为新进程分配一个陷阱帧（trapframe），这是用于保存进程在内核模式和用户模式之间切换时的寄存器状态。
     release(&p->lock);
     return 0;
   }
